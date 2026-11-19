@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>قصص دينية إسلامية</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel" data-type="module" data-presets="react">
+    import React from "react";
+    import { createRoot } from "react-dom/client";
+
+    const { useState, useEffect, useRef } = React;
+
+    function App() {
+      const [stories, setStories] = useState([]);
+      const [filteredStories, setFilteredStories] = useState([]);
+      const [selectedStory, setSelectedStory] = useState(null);
+      const [favorites, setFavorites] = useState(new Set());
+      const [category, setCategory] = useState("all");
+      const [searchQuery, setSearchQuery] = useState("");
+      const [darkMode, setDarkMode] = useState(false);
+      const [loading, setLoading] = useState(true);
+      const [seeding, setSeeding] = useState(false);
+      const contentRef = useRef(null);
+
+      useEffect(() => {
+        const theme = localStorage.getItem("theme");
+        if (theme === "dark") {
+          setDarkMode(true);
+          document.body.classList.add("dark");
+        }
+        loadData();
+      }, []);
+
+      useEffect(() => {
+        if (darkMode) {
+          document.body.classList.add("dark");
+          localStorage.setItem("theme", "dark");
+        } else {
+          document.body.classList.remove("dark");
+          localStorage.setItem("theme", "light");
+        }
+      }, [darkMode]);
+
+      useEffect(() => {
+        filterStories();
+      }, [stories, category, searchQuery]);
+
+      async function loadData() {
+        try {
+          const [storiesRes, favoritesRes] = await Promise.all([
+            fetch("./api/stories"),
+            fetch("./api/favorites")
+          ]);
+          
+          const storiesData = await storiesRes.json();
+          const favoritesData = await favoritesRes.json();
+          
+          if (storiesData.length === 0) {
+            // No stories, need to seed
+            setLoading(false);
+            return;
+          }
+          
+          setStories(storiesData);
+          setFavorites(new Set(favoritesData.map(f => f.story_id)));
+          setLoading(false);
+        } catch (error) {
+          console.error("Error loading data:", error);
+          setLoading(false);
+        }
+      }
+
+      async function seedDatabase() {
+        setSeeding(true);
+        try {
+          const response = await fetch("./api/seed", { method: "POST" });
+          const data = await response.json();
+          console.log(data.message);
+          await loadData();
+        } catch (error) {
+          console.error("Error seeding database:", error);
+        }
+        setSeeding(false);
+      }
+
+      function filterStories() {
+        let filtered = [...stories];
+        
+        if (category !== "all") {
+          filtered = filtered.filter(s => s.category === category);
+        }
+        
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          filtered = filtered.filter(s => 
+            s.title.toLowerCase().includes(query) || 
+            s.content.toLowerCase().includes(query) ||
+            s.summary.toLowerCase().includes(query)
+          );
+        }
+        
+        setFilteredStories(filtered);
+      }
+
+      async function toggleFavorite(storyId) {
+        try {
+          const response = await fetch("./api/favorites/toggle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ storyId })
+          });
+          const data = await response.json();
+          
+          const newFavorites = new Set(favorites);
+          if (data.favorited) {
+            newFavorites.add(storyId);
+          } else {
+            newFavorites.delete(storyId);
+          }
+          setFavorites(newFavorites);
+        } catch (error) {
+          console.error("Error toggling favorite:", error);
+        }
+      }
+
+      function selectStory(story) {
+        setSelectedStory(story);
+        setTimeout(() => {
+          if (contentRef.current) {
+            contentRef.current.scrollTop = 0;
+          }
+        }, 10);
+      }
+
+      const categories = [
+        { id: "all", label: "جميع القصص", icon: "📚" },
+        { id: "prophets", label: "قصص الأنبياء", icon: "🕌" },
+        { id: "companions", label: "قصص الصحابة", icon: "⭐" }
+      ];
+
+      if (loading) {
+        return (
+          <div className="loading-screen">
+            <div className="loading-content">
+              <div className="islamic-pattern"></div>
+              <h1 className="loading-title">قصص دينية إسلامية</h1>
+              <div className="loading-spinner"></div>
+              <p className="loading-text">جاري التحميل...</p>
+            </div>
+          </div>
+        );
+      }
+
+      if (stories.length === 0) {
+        return (
+          <div className="welcome-screen">
+            <div className="welcome-content">
+              <div className="welcome-icon">🕌</div>
+              <h1 className="welcome-title">قصص دينية إسلامية</h1>
+              <p className="welcome-subtitle">قصص الأنبياء والصحابة رضوان الله عليهم</p>
+              <button 
+                className="seed-button"
+                onClick={seedDatabase}
+                disabled={seeding}
+              >
+                {seeding ? "جاري التحميل..." : "تحميل القصص"}
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="app-container">
+          {/* Header */}
+          <header className="app-header">
+            <div className="header-content">
+              <div className="header-right">
+                <div className="logo">
+                  <span className="logo-icon">🕌</span>
+                  <span className="logo-text">قصص دينية إسلامية</span>
+                </div>
+              </div>
+              <div className="header-left">
+                <button 
+                  className="theme-toggle"
+                  onClick={() => setDarkMode(!darkMode)}
+                  title={darkMode ? "الوضع النهاري" : "الوضع الليلي"}
+                >
+                  {darkMode ? "☀️" : "🌙"}
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <div className="main-content">
+            {/* Sidebar */}
+            <aside className="sidebar">
+              {/* Search */}
+              <div className="search-box">
+                <input
+                  type="text"
+                  placeholder="ابحث في القصص..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                />
+                <span className="search-icon">🔍</span>
+              </div>
+
+              {/* Categories */}
+              <div className="categories">
+                <h3 className="categories-title">التصنيفات</h3>
+                <div className="category-list">
+                  {categories.map(cat => (
+                    <button
+                      key={cat.id}
+                      className={`category-item ${category === cat.id ? "active" : ""}`}
+                      onClick={() => setCategory(cat.id)}
+                    >
+                      <span className="category-icon">{cat.icon}</span>
+                      <span className="category-label">{cat.label}</span>
+                      <span className="category-count">
+                        {cat.id === "all" 
+                          ? stories.length 
+                          : stories.filter(s => s.category === cat.id).length}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Stories List */}
+              <div className="stories-list">
+                <h3 className="stories-list-title">
+                  {filteredStories.length} قصة
+                </h3>
+                <div className="stories-scroll">
+                  {filteredStories.map(story => (
+                    <div
+                      key={story.id}
+                      className={`story-card ${selectedStory?.id === story.id ? "active" : ""}`}
+                      onClick={() => selectStory(story)}
+                    >
+                      <div className="story-card-header">
+                        <h4 className="story-card-title">{story.title}</h4>
+                        <button
+                          className={`favorite-btn ${favorites.has(story.id) ? "active" : ""}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(story.id);
+                          }}
+                        >
+                          {favorites.has(story.id) ? "❤️" : "🤍"}
+                        </button>
+                      </div>
+                      <p className="story-card-summary">{story.summary}</p>
+                      <div className="story-card-meta">
+                        <span className="story-category">
+                          {story.category === "prophets" ? "🕌 الأنبياء" : "⭐ الصحابة"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </aside>
+
+            {/* Content Area */}
+            <main className="content-area" ref={contentRef}>
+              {selectedStory ? (
+                <article className="story-content">
+                  <div className="story-header">
+                    <div className="story-header-top">
+                      <button
+                        className={`favorite-btn-large ${favorites.has(selectedStory.id) ? "active" : ""}`}
+                        onClick={() => toggleFavorite(selectedStory.id)}
+                      >
+                        {favorites.has(selectedStory.id) ? "❤️" : "🤍"}
+                      </button>
+                    </div>
+                    <h1 className="story-title">{selectedStory.title}</h1>
+                    <div className="story-meta">
+                      <span className="story-badge">
+                        {selectedStory.category === "prophets" ? "🕌 قصص الأنبياء" : "⭐ قصص الصحابة"}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="story-body">
+                    <div className="decorative-line"></div>
+                    {selectedStory.content.split('\n\n').map((paragraph, index) => (
+                      <p key={index} className="story-paragraph">{paragraph}</p>
+                    ))}
+                    <div className="decorative-line"></div>
+                  </div>
+
+                  <div className="story-footer">
+                    <p className="footer-text">﴿ سُبْحَانَ رَبِّكَ رَبِّ الْعِزَّةِ عَمَّا يَصِفُونَ * وَسَلَامٌ عَلَى الْمُرْسَلِينَ * وَالْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ ﴾</p>
+                  </div>
+                </article>
+              ) : (
+                <div className="empty-state">
+                  <div className="empty-icon">📖</div>
+                  <h2 className="empty-title">اختر قصة لقراءتها</h2>
+                  <p className="empty-text">اختر قصة من القائمة على اليمين لعرضها هنا</p>
+                </div>
+              )}
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    createRoot(document.getElementById("app")).render(<App />);
+  </script>
+</body>
+</html>
