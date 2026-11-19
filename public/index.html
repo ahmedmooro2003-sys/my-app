@@ -38,6 +38,7 @@
       const [darkMode, setDarkMode] = useState(false);
       const [loading, setLoading] = useState(true);
       const [seeding, setSeeding] = useState(false);
+      const [showContact, setShowContact] = useState(false);
       const contentRef = useRef(null);
 
       useEffect(() => {
@@ -201,6 +202,13 @@
               </div>
               <div className="header-left">
                 <button 
+                  className="contact-btn"
+                  onClick={() => setShowContact(true)}
+                  title="التواصل مع المطور"
+                >
+                  📧
+                </button>
+                <button 
                   className="theme-toggle"
                   onClick={() => setDarkMode(!darkMode)}
                   title={darkMode ? "الوضع النهاري" : "الوضع الليلي"}
@@ -327,6 +335,95 @@
               )}
             </main>
           </div>
+
+          {/* Contact Modal */}
+          {showContact && (
+            <div className="modal-overlay" onClick={() => setShowContact(false)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <button className="modal-close" onClick={() => setShowContact(false)}>✕</button>
+                <div className="contact-header">
+                  <div className="contact-icon">👨‍💻</div>
+                  <h2 className="contact-title">التواصل مع المطور</h2>
+                  <p className="contact-subtitle">نسعد بتواصلكم ومقترحاتكم</p>
+                </div>
+                
+                <div className="contact-body">
+                  <div className="contact-info">
+                    <div className="contact-item">
+                      <span className="contact-item-icon">📧</span>
+                      <div className="contact-item-content">
+                        <h4>البريد الإلكتروني</h4>
+                        <a href="mailto:developer@islamic-stories.com" className="contact-link">
+                          developer@islamic-stories.com
+                        </a>
+                      </div>
+                    </div>
+
+                    <div className="contact-item">
+                      <span className="contact-item-icon">💬</span>
+                      <div className="contact-item-content">
+                        <h4>واتساب</h4>
+                        <a href="https://wa.me/1234567890" target="_blank" rel="noopener" className="contact-link">
+                          +1 (234) 567-890
+                        </a>
+                      </div>
+                    </div>
+
+                    <div className="contact-item">
+                      <span className="contact-item-icon">🐦</span>
+                      <div className="contact-item-content">
+                        <h4>تويتر</h4>
+                        <a href="https://twitter.com/islamic_stories" target="_blank" rel="noopener" className="contact-link">
+                          @islamic_stories
+                        </a>
+                      </div>
+                    </div>
+
+                    <div className="contact-item">
+                      <span className="contact-item-icon">📱</span>
+                      <div className="contact-item-content">
+                        <h4>تيليجرام</h4>
+                        <a href="https://t.me/islamic_stories" target="_blank" rel="noopener" className="contact-link">
+                          @islamic_stories
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="contact-form">
+                    <h3 className="form-title">أرسل رسالة</h3>
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      alert("شكراً لتواصلك! سنرد عليك في أقرب وقت إن شاء الله");
+                      setShowContact(false);
+                    }}>
+                      <input 
+                        type="text" 
+                        placeholder="الاسم" 
+                        required 
+                        className="form-input"
+                      />
+                      <input 
+                        type="email" 
+                        placeholder="البريد الإلكتروني" 
+                        required 
+                        className="form-input"
+                      />
+                      <textarea 
+                        placeholder="رسالتك..." 
+                        required 
+                        rows="4"
+                        className="form-textarea"
+                      ></textarea>
+                      <button type="submit" className="form-submit">
+                        إرسال الرسالة 📤
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
